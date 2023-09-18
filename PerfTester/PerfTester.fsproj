@@ -1,0 +1,29 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net7.0</TargetFramework>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <Compile Include="Tools.fs" />
+        <Compile Include="UMX.fs" />
+        <Compile Include="NamespaceName.fs" />
+        <Compile Include="TopicName.fs" />
+        <Compile Include="MessageId.fs" />
+        <Compile Include="DTO.fs" />
+        <Compile Include="ClientCnx.fs" />
+        <Compile Include="Program.fs"/>
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\PerfTester.Proto\PerfTester.Proto.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="FSharp.UMX" Version="1.1.0" />
+      <PackageReference Include="Microsoft.IO.RecyclableMemoryStream" Version="2.3.2" />
+      <PackageReference Include="Pipelines.Sockets.Unofficial" Version="2.2.8" />
+    </ItemGroup>
+
+</Project>
