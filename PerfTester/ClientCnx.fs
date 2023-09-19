@@ -165,7 +165,6 @@ module Cnx =
             let msg = SocketMessage.SocketMessageWithoutReply (Commands.newLookupResponse(commandLookup.RequestId))
             mb.Writer.TryWrite(msg) |> ignore
         | XCommandSend commandSend ->
-            Console.WriteLine("Received CommandSend command")
             let messageId = MessageIdData()
             let msg = SocketMessage.SocketMessageWithoutReply (
                 Commands.newSendReceipt commandSend.ProducerId commandSend.SequenceId messageId
@@ -178,7 +177,7 @@ module Cnx =
         | XCommandCloseConsumer commandCloseConsumer -> failwith "todo"
 
     let readSocket (connection: SocketConnection) =
-        backgroundTask {
+        task {
             let mutable continueLooping = true
             let reader = connection.Input
             let mb = createMailBox connection

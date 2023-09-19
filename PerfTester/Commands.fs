@@ -60,7 +60,8 @@ let newProducerSuccess requestId : Payload =
     let response = CommandProducerSuccess(
         RequestId = requestId,
         ProducerName = "PerfectTester",
-        ProducerReady = true
+        ProducerReady = true,
+        SchemaVersion = [||]
     )
     let command = BaseCommand(``type`` = CommandType.ProducerSuccess, ProducerSuccess = response)
     command |> serializeSimpleCommand
@@ -68,7 +69,8 @@ let newProducerSuccess requestId : Payload =
 let newPartitionMetadataResponse requestId : Payload =
     let response = CommandPartitionedTopicMetadataResponse(
         Partitions = 0u,
-        RequestId = requestId
+        RequestId = requestId,
+        Response = CommandPartitionedTopicMetadataResponse.LookupType.Success
     )
     let command = BaseCommand(``type`` = CommandType.PartitionedMetadataResponse, partitionMetadataResponse = response)
     command |> serializeSimpleCommand
