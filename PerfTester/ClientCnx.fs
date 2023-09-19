@@ -18,6 +18,8 @@ open System.Threading.Channels
 type PulsarCommand =
     | XCommandConnect of CommandConnect
     | XCommandProducer of CommandProducer
+    | XCommandPartitionedTopicMetadata of CommandPartitionedTopicMetadata
+    | XCommandLookup of CommandLookupTopic
     | XCommandSend of CommandSend
     | XCommandCloseProducer of CommandCloseProducer
     | XCommandSubscribe of CommandSubscribe
@@ -25,6 +27,7 @@ type PulsarCommand =
     | XCommandAck of CommandAck
     | XCommandCloseConsumer of CommandCloseConsumer
     | XCommandPing of CommandPing
+    | XCommandPong of CommandPong
 
 
 and CommandParseError =
@@ -96,12 +99,18 @@ module Cnx =
             Ok (XCommandSubscribe command.Subscribe)
         | BaseCommand.Type.Ping ->
             Ok (XCommandPing command.Ping)
+        | BaseCommand.Type.Pong ->
+            Ok (XCommandPong command.Pong)
         | BaseCommand.Type.Flow ->
             Ok (XCommandFlow command.Flow)
         | BaseCommand.Type.Ack ->
             Ok (XCommandAck command.Ack)
         | BaseCommand.Type.CloseConsumer ->
             Ok (XCommandCloseConsumer command.CloseConsumer)
+        | BaseCommand.Type.PartitionedMetadata ->
+            Ok (XCommandPartitionedTopicMetadata command.partitionMetadata)
+        | BaseCommand.Type.Lookup ->
+            Ok (XCommandLookup command.lookupTopic)
         | unknownType ->
             Result.Error (UnknownCommandType unknownType)
 
@@ -131,23 +140,48 @@ module Cnx =
             Result.Error IncompleteCommand, SequencePosition()
 
 
-    let handleCommand xcmd =
+    let handleCommand xcmd (mb: Channel<SocketMessage>) =
         match xcmd with
         | XCommandConnect cmd ->
             Console.WriteLine("Received Connect command")
-        | XCommandSend commandSend -> failwith "todo"
+            let msg = SocketMessage.SocketMessageWithoutReply (Commands.newConnected())
+            mb.Writer.TryWrite(msg) |> ignore
+        | XCommandProducer commandProducer ->
+            Console.WriteLine("Received Producer command")
+            let msg = SocketMessage.SocketMessageWithoutReply (Commands.newProducerSuccess(commandProducer.RequestId))
+            mb.Writer.TryWrite(msg) |> ignore
+        | XCommandPing commandPing ->
+            Console.WriteLine("Received Ping command")
+            let msg = SocketMessage.SocketMessageWithoutReply (Commands.newPong())
+            mb.Writer.TryWrite(msg) |> ignore
+        | XCommandPong commandPong ->
+            Console.WriteLine("Received Pong command")
+        | XCommandPartitionedTopicMetadata commandPartitionedTopicMetadata ->
+            Console.WriteLine("Received PartitionedTopicMetadata command")
+            let msg = SocketMessage.SocketMessageWithoutReply (Commands.newPartitionMetadataResponse(commandPartitionedTopicMetadata.RequestId))
+            mb.Writer.TryWrite(msg) |> ignore
+        | XCommandLookup commandLookup ->
+            Console.WriteLine("Received CommandLookup command")
+            let msg = SocketMessage.SocketMessageWithoutReply (Commands.newLookupResponse(commandLookup.RequestId))
+            mb.Writer.TryWrite(msg) |> ignore
+        | XCommandSend commandSend ->
+            Console.WriteLine("Received CommandSend command")
+            let messageId = MessageIdData()
+            let msg = SocketMessage.SocketMessageWithoutReply (
+                Commands.newSendReceipt commandSend.ProducerId commandSend.SequenceId messageId
+            )
+            mb.Writer.TryWrite(msg) |> ignore
         | XCommandCloseProducer commandCloseProducer -> failwith "todo"
         | XCommandSubscribe commandSubscribe -> failwith "todo"
         | XCommandFlow commandFlow -> failwith "todo"
         | XCommandAck commandAck -> failwith "todo"
         | XCommandCloseConsumer commandCloseConsumer -> failwith "todo"
-        | XCommandPing commandPing -> failwith "todo"
-        | XCommandProducer commandProducer -> failwith "todo"
 
     let readSocket (connection: SocketConnection) =
         backgroundTask {
             let mutable continueLooping = true
             let reader = connection.Input
+            let mb = createMailBox connection
 
             try
                 while continueLooping do
@@ -159,7 +193,7 @@ module Cnx =
                     else
                         match tryParse buffer with
                         | Result.Ok xcmd, consumed ->
-                            handleCommand xcmd
+                            handleCommand xcmd mb
                             reader.AdvanceTo consumed
                         | Result.Error IncompleteCommand, _ ->
                             reader.AdvanceTo(buffer.Start, buffer.End)

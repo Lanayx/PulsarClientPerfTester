@@ -12,18 +12,24 @@ let main argv =
 
     Console.WriteLine "Starting server"
 
+    let t =
+        task {
+            // Establish the local endpoint for the socket
+            let localEndPoint = IPEndPoint(IPAddress.Any, 6650)
 
-    // Establish the local endpoint for the socket
-    let localEndPoint = IPEndPoint(IPAddress.Any, 6650)
+            // Create a TCP/IP socket
+            use socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp)
+            // Bind the socket to the local endpoint and listen
+            socket.Blocking <- false
+            socket.Bind(localEndPoint)
+            socket.Listen(100)
+            use! startedSocket = socket.AcceptAsync()
+            Console.WriteLine "Connection accepted"
 
-    // Create a TCP/IP socket
-    use socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp)
-    // Bind the socket to the local endpoint and listen
-    socket.Blocking <- false
-    socket.Bind(localEndPoint)
-    socket.Listen(100)
+            // Start an asynchronous socket to listen for connections
+            use connection = SocketConnection.Create(startedSocket)
+            do! Cnx.readSocket connection
 
-    // Start an asynchronous socket to listen for connections
-    use connection = SocketConnection.Create(socket)
-    (Cnx.readSocket connection).GetAwaiter().GetResult()
+        }
+    t.GetAwaiter().GetResult()
     0

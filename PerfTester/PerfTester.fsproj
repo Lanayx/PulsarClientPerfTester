@@ -12,6 +12,7 @@
         <Compile Include="TopicName.fs" />
         <Compile Include="MessageId.fs" />
         <Compile Include="DTO.fs" />
+        <Compile Include="Commands.fs" />
         <Compile Include="ClientCnx.fs" />
         <Compile Include="Program.fs"/>
     </ItemGroup>
