@@ -12,7 +12,6 @@ open System.Buffers
 open System.IO
 open ProtoBuf
 open System.Threading
-open PertTester.Proto
 open System.Threading.Channels
 
 type PulsarCommand =
