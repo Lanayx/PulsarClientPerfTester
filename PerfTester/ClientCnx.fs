@@ -70,21 +70,6 @@ module Cnx =
         |> ignore
         sendMb
 
-    let readMessage (reader: BinaryReader) (stream: MemoryStream) frameLength =
-        reader.ReadInt16() |> int16FromBigEndian |> invalidArgIf ((<>) MagicNumber) "Invalid magicNumber" |> ignore
-        let messageCheckSum  = reader.ReadInt32() |> int32FromBigEndian
-        let metadataPointer = stream.Position
-        let metadata = Serializer.DeserializeWithLengthPrefix<MessageMetadata>(stream, PrefixStyle.Fixed32BigEndian)
-        let payloadPointer = stream.Position
-        let metadataLength = payloadPointer - metadataPointer |> int
-        let payloadLength = frameLength - (int payloadPointer)
-        let payload = reader.ReadBytes(payloadLength)
-        stream.Seek(metadataPointer, SeekOrigin.Begin) |> ignore
-        let calculatedCheckSum = CRC32C.Get(0u, stream, metadataLength + payloadLength) |> int32
-        if (messageCheckSum <> calculatedCheckSum) then
-            Console.WriteLine("Invalid checksum. Received: {0} Calculated: {1}", messageCheckSum, calculatedCheckSum)
-        (metadata, payload, messageCheckSum = calculatedCheckSum)
-
     let readCommand (command: BaseCommand) reader stream frameLength =
         match command.``type`` with
         | BaseCommand.Type.Connect ->
