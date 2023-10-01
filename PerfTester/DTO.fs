@@ -398,7 +398,7 @@ type MessageBuilder =
     static member DisableReplication =
         DisableReplication
 
-type internal Payload = (PipeWriter -> Task<unit>) * BaseCommand.Type
+type internal Payload = (PipeWriter -> Task) * BaseCommand.Type
 
 type internal RedeliverSet = HashSet<MessageId>
 

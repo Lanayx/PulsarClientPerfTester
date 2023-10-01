@@ -1,5 +1,6 @@
 namespace PerfTester
 
+open System.IO.Pipelines
 open System.Reflection
 open System.Collections.Generic
 
@@ -20,11 +21,9 @@ type PulsarCommand =
     | XCommandPartitionedTopicMetadata of CommandPartitionedTopicMetadata
     | XCommandLookup of CommandLookupTopic
     | XCommandSend of CommandSend
-    | XCommandCloseProducer of CommandCloseProducer
     | XCommandSubscribe of CommandSubscribe
     | XCommandFlow of CommandFlow
     | XCommandAck of CommandAck
-    | XCommandCloseConsumer of CommandCloseConsumer
     | XCommandPing of CommandPing
     | XCommandPong of CommandPong
 
@@ -39,7 +38,7 @@ and SocketMessage =
     | Stop
 
 module Cnx =
-    let sendSerializedPayload (writePayload, commandType: BaseCommand.Type) (connection: SocketConnection) =
+    let sendSerializedPayload (writePayload: (PipeWriter -> Task), commandType: BaseCommand.Type) (connection: SocketConnection) =
         backgroundTask {
             try
                 do! connection.Output |> writePayload
@@ -77,8 +76,6 @@ module Cnx =
             Ok (XCommandProducer command.Producer)
         | BaseCommand.Type.Send ->
             Ok (XCommandSend command.Send)
-        | BaseCommand.Type.CloseProducer ->
-            Ok (XCommandCloseProducer command.CloseProducer)
         | BaseCommand.Type.Subscribe ->
             Ok (XCommandSubscribe command.Subscribe)
         | BaseCommand.Type.Ping ->
@@ -89,8 +86,6 @@ module Cnx =
             Ok (XCommandFlow command.Flow)
         | BaseCommand.Type.Ack ->
             Ok (XCommandAck command.Ack)
-        | BaseCommand.Type.CloseConsumer ->
-            Ok (XCommandCloseConsumer command.CloseConsumer)
         | BaseCommand.Type.PartitionedMetadata ->
             Ok (XCommandPartitionedTopicMetadata command.partitionMetadata)
         | BaseCommand.Type.Lookup ->
@@ -123,6 +118,11 @@ module Cnx =
         else
             Result.Error IncompleteCommand, SequencePosition()
 
+    let handleFlowCommand (commandFlow: CommandFlow) (mb: Channel<SocketMessage>) =
+        for _ in 1u .. commandFlow.messagePermits do
+            let msg = SocketMessage.SocketMessageWithoutReply (Commands.newMessage(commandFlow.ConsumerId))
+            mb.Writer.TryWrite(msg) |> ignore
+        ()
 
     let handleCommand xcmd (mb: Channel<SocketMessage>) =
         match xcmd with
@@ -149,16 +149,21 @@ module Cnx =
             let msg = SocketMessage.SocketMessageWithoutReply (Commands.newLookupResponse(commandLookup.RequestId))
             mb.Writer.TryWrite(msg) |> ignore
         | XCommandSend commandSend ->
+            Console.WriteLine("Received commandSend command")
             let messageId = MessageIdData()
             let msg = SocketMessage.SocketMessageWithoutReply (
                 Commands.newSendReceipt commandSend.ProducerId commandSend.SequenceId messageId
             )
             mb.Writer.TryWrite(msg) |> ignore
-        | XCommandCloseProducer commandCloseProducer -> failwith "todo"
-        | XCommandSubscribe commandSubscribe -> failwith "todo"
-        | XCommandFlow commandFlow -> failwith "todo"
-        | XCommandAck commandAck -> failwith "todo"
-        | XCommandCloseConsumer commandCloseConsumer -> failwith "todo"
+        | XCommandSubscribe commandSubscribe ->
+            Console.WriteLine("Received CommandSubscribe command")
+            let msg = SocketMessage.SocketMessageWithoutReply (Commands.newSuccess(commandSubscribe.RequestId))
+            mb.Writer.TryWrite(msg) |> ignore
+        | XCommandFlow commandFlow ->
+            Console.WriteLine("Received Flow command")
+            handleFlowCommand commandFlow mb
+        | XCommandAck _ ->
+            Console.WriteLine("Received commandAck command")
 
     let readSocket (connection: SocketConnection) =
         task {
