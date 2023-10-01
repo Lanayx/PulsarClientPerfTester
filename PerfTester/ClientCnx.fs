@@ -119,8 +119,9 @@ module Cnx =
             Result.Error IncompleteCommand, SequencePosition()
 
     let handleFlowCommand (commandFlow: CommandFlow) (mb: Channel<SocketMessage>) =
-        for _ in 1u .. commandFlow.messagePermits do
-            let msg = SocketMessage.SocketMessageWithoutReply (Commands.newMessage(commandFlow.ConsumerId))
+        let batchSize = 174
+        for _ in 1u .. (commandFlow.messagePermits / (uint batchSize) + 1u) do
+            let msg = SocketMessage.SocketMessageWithoutReply (Commands.newMessage commandFlow.ConsumerId batchSize)
             mb.Writer.TryWrite(msg) |> ignore
         ()
 
@@ -160,10 +161,9 @@ module Cnx =
             let msg = SocketMessage.SocketMessageWithoutReply (Commands.newSuccess(commandSubscribe.RequestId))
             mb.Writer.TryWrite(msg) |> ignore
         | XCommandFlow commandFlow ->
-            Console.WriteLine("Received Flow command")
             handleFlowCommand commandFlow mb
         | XCommandAck _ ->
-            Console.WriteLine("Received commandAck command")
+            ()
 
     let readSocket (connection: SocketConnection) =
         task {

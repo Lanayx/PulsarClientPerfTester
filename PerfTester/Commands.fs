@@ -17,8 +17,6 @@ let stringPayload = "AAAABhjuBUC9BwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 
 let payload = System.Convert.FromBase64String(stringPayload)
 
-
-
 let private serializePayloadCommand (command : BaseCommand) (metadata: MessageMetadata) (payload: byte[]) =
     (fun (output: PipeWriter) ->
         let temp = MemoryStreamManager.GetStream() :?> RecyclableMemoryStream
@@ -163,7 +161,7 @@ let newSuccess requestId : Payload =
 
 
 
-let newMessage consumerId: Payload =
+let newMessage consumerId batchSize: Payload =
     let response = CommandMessage(
         ConsumerId = consumerId,
         MessageId = MessageIdData(
@@ -175,7 +173,7 @@ let newMessage consumerId: Payload =
         ProducerName = "PerfTester",
         SequenceId = seqId,
         PublishTime = 1696093979000UL,
-        NumMessagesInBatch = 174
+        NumMessagesInBatch = batchSize
     )
     seqId <- seqId + 1UL
     let command = BaseCommand(``type`` = CommandType.Message, Message = response)
