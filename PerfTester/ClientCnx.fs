@@ -150,7 +150,6 @@ module Cnx =
             let msg = SocketMessage.SocketMessageWithoutReply (Commands.newLookupResponse(commandLookup.RequestId))
             mb.Writer.TryWrite(msg) |> ignore
         | XCommandSend commandSend ->
-            Console.WriteLine("Received commandSend command")
             let messageId = MessageIdData()
             let msg = SocketMessage.SocketMessageWithoutReply (
                 Commands.newSendReceipt commandSend.ProducerId commandSend.SequenceId messageId
