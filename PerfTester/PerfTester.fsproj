@@ -15,6 +15,7 @@
         <Compile Include="Commands.fs" />
         <Compile Include="ClientCnx.fs" />
         <Compile Include="Program.fs"/>
+        <None Include="runtimeconfig.template.json" />
     </ItemGroup>
 
     <ItemGroup>
@@ -25,6 +26,7 @@
       <PackageReference Include="FSharp.UMX" Version="1.1.0" />
       <PackageReference Include="Microsoft.IO.RecyclableMemoryStream" Version="2.3.2" />
       <PackageReference Include="Pipelines.Sockets.Unofficial" Version="2.2.8" />
+      <PackageReference Include="System.IO.Pipelines" Version="8.0.0-rc.1.23419.4" />
     </ItemGroup>
 
 </Project>

@@ -1,18 +1,13 @@
 namespace PerfTester
 
 open System.IO.Pipelines
-open System.Reflection
-open System.Collections.Generic
 
 open System.Threading.Tasks
 open Pipelines.Sockets.Unofficial
 open pulsar.proto
 open System
-open FSharp.UMX
 open System.Buffers
-open System.IO
 open ProtoBuf
-open System.Threading
 open System.Threading.Channels
 
 type PulsarCommand =
@@ -38,7 +33,7 @@ and SocketMessage =
     | Stop
 
 module Cnx =
-    let sendSerializedPayload (writePayload: (PipeWriter -> Task), commandType: BaseCommand.Type) (connection: SocketConnection) =
+    let sendSerializedPayload (writePayload: PipeWriter -> Task, commandType: BaseCommand.Type) (connection: SocketConnection) =
         backgroundTask {
             try
                 do! connection.Output |> writePayload
@@ -68,7 +63,7 @@ module Cnx =
         |> ignore
         sendMb
 
-    let readCommand (command: BaseCommand) reader stream frameLength =
+    let readCommand (command: BaseCommand) =
         match command.``type`` with
         | BaseCommand.Type.Connect ->
             Ok (XCommandConnect command.Connect)
@@ -94,27 +89,22 @@ module Cnx =
             Result.Error (UnknownCommandType unknownType)
 
     let tryParse (buffer: ReadOnlySequence<byte>) =
-        let length = int buffer.Length
-        if (length >= 8) then
-            let array = ArrayPool.Shared.Rent length
+        let length = int buffer.Length // at least 8
+        let mutable reader = SequenceReader<byte>(buffer)
+        let mutable totalLength = -1
+        reader.TryReadBigEndian(&totalLength) |> ignore
+        let frameLength = totalLength + 4
+        if (length >= frameLength) then
+            let mutable baseCommandLength = -1
+            reader.TryReadBigEndian(&baseCommandLength) |> ignore
+            let command = Serializer.Deserialize<BaseCommand>(buffer.Slice(reader.Consumed, baseCommandLength))
+            reader.Advance baseCommandLength
+            let consumed = int64 frameLength |> buffer.GetPosition
             try
-                buffer.CopyTo(Span(array))
-                use stream =  new MemoryStream(array)
-                use reader = new BinaryReader(stream)
-                let totalength = reader.ReadInt32() |> int32FromBigEndian
-                let frameLength = totalength + 4
-                if (length >= frameLength) then
-                    let command = Serializer.DeserializeWithLengthPrefix<BaseCommand>(stream, PrefixStyle.Fixed32BigEndian)
-                    let consumed = int64 frameLength |> buffer.GetPosition
-                    try
-                        let wrappedCommand = readCommand command reader stream frameLength
-                        wrappedCommand, consumed
-                    with ex ->
-                        Result.Error (CorruptedCommand ex), consumed
-                else
-                    Result.Error IncompleteCommand, SequencePosition()
-            finally
-                ArrayPool.Shared.Return array
+                let wrappedCommand = readCommand command
+                wrappedCommand, consumed
+            with ex ->
+                Result.Error (CorruptedCommand ex), consumed
         else
             Result.Error IncompleteCommand, SequencePosition()
 
@@ -172,12 +162,12 @@ module Cnx =
 
             try
                 while continueLooping do
-                    let! result = reader.ReadAsync()
-                    let buffer = result.Buffer
+                    let! result = reader.ReadAtLeastAsync(8)
                     if result.IsCompleted then
                         Console.WriteLine("Socket was disconnected normally while reading")
                         continueLooping <- false
                     else
+                        let buffer = result.Buffer
                         match tryParse buffer with
                         | Result.Ok xcmd, consumed ->
                             handleCommand xcmd mb
