@@ -19,7 +19,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\PerfTester.Proto\PerfTester.Proto.csproj" />
+      <ProjectReference Include="..\PerfTester.Server.Proto\PerfTester.Server.Proto.csproj" />
     </ItemGroup>
 
     <ItemGroup>

@@ -4,7 +4,7 @@ open System
 open System.Net
 open System.Net.Sockets
 open Pipelines.Sockets.Unofficial
-open PerfTester
+open PerfTester.Server
 
 
 let listen () =

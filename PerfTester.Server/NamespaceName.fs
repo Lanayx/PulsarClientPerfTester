@@ -1,4 +1,4 @@
-namespace PerfTester
+namespace PerfTester.Server
 
 type NamespaceName(name : string) =
 

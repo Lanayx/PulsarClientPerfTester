@@ -1,5 +1,5 @@
 [<AutoOpen>]
-module PerfTester.Tools
+module PerfTester.Server.Tools
 
 open System
 open System.Collections

@@ -1,9 +1,9 @@
-module PerfTester.Commands
+module PerfTester.Server.Commands
 
 open System.IO.Pipelines
 open System.Threading.Tasks
 open Microsoft.IO
-open PulsarTester.Common
+open PulsarTester.Server.Common
 open pulsar.proto
 open System.IO
 open ProtoBuf
@@ -56,7 +56,7 @@ let private serializePayloadCommand (command : BaseCommand) (metadata: MessageMe
 
         // write CRC
         temp.Seek(int64 crcPayloadStart, SeekOrigin.Begin) |> ignore
-        let crc = int32 <| CRC32C.GetForRMS(temp, totalMetadataSize + payloadSize)
+        let crc = int32 <| CRC32C.GetForROS(temp.GetReadOnlySequence().Slice(temp.Position, totalMetadataSize + payloadSize))
         temp.Seek(int64 crcStart, SeekOrigin.Begin) |> ignore
         binaryWriter.Write(int32ToBigEndian crc)
 

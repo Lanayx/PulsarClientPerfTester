@@ -1,5 +1,5 @@
 [<AutoOpen>]
-module internal PerfTester.UMX
+module internal PerfTester.Server.UMX
 
 open FSharp.UMX
 

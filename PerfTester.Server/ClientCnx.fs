@@ -1,4 +1,4 @@
-namespace PerfTester
+namespace PerfTester.Server
 
 open System.IO.Pipelines
 

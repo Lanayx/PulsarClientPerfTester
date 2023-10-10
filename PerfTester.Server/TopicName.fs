@@ -1,4 +1,4 @@
-namespace PerfTester
+namespace PerfTester.Server
 
 open FSharp.UMX
 open System.Text.RegularExpressions
