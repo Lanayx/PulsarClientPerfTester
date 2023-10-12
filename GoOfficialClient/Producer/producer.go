@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"sync"
 	"time"
 
 	"github.com/apache/pulsar-client-go/pulsar"
@@ -31,22 +32,36 @@ func main() {
 	payload := []byte("hello")
 	ctx := context.Background()
 
-	start := time.Now()
-	n := 100000
+	n := 1000000
+
+	wg := &sync.WaitGroup{}
 
 	//warm up
-	for i := 0; i < n/10; i++ {
-		producer.Send(ctx, &pulsar.ProducerMessage{
-			Payload: payload,
-		})
+	for j := 1; j <= n/10000; j++ {
+		for i := 0; i < 1000; i++ {
+			wg.Add(1)
+			producer.SendAsync(ctx, &pulsar.ProducerMessage{
+				Payload: payload,
+			}, func(mid pulsar.MessageID, msg *pulsar.ProducerMessage, err error) {
+				defer wg.Done()
+			})
+		}
+		wg.Wait()
 	}
 
-	for i := 0; i < n; i++ {
-		producer.Send(ctx, &pulsar.ProducerMessage{
-			Payload: payload,
-		})
-		if i%(n/100) == 0 {
-			fmt.Println("Published message", i)
+	start := time.Now()
+	for j := 1; j <= n/1000; j++ {
+		for i := 0; i < 1000; i++ {
+			wg.Add(1)
+			producer.SendAsync(ctx, &pulsar.ProducerMessage{
+				Payload: payload,
+			}, func(mid pulsar.MessageID, msg *pulsar.ProducerMessage, err error) {
+				defer wg.Done()
+			})
+		}
+		wg.Wait()
+		if j%10 == 0 {
+			fmt.Println("Published message", j*1000)
 		}
 	}
 
