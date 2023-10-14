@@ -16,7 +16,6 @@ public class SampleConsumer {
             .subscriptionName("test7")
             .subscribe();
 
-        long start = System.nanoTime();
         int n = 10000000;
         int i = 0;        
         // warmup
@@ -27,6 +26,7 @@ public class SampleConsumer {
         }
         //warmup end
         var j = 0;
+        long start = System.nanoTime();
         while(j < n) {
             if (j % (n/100) == 0)
             {
