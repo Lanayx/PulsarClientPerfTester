@@ -138,7 +138,8 @@ let newLookupResponse requestId : Payload =
     let response = CommandLookupTopicResponse(
         RequestId = requestId,
         Response = CommandLookupTopicResponse.LookupType.Connect,
-        brokerServiceUrl = "pulsar://127.0.0.1:6650"
+        brokerServiceUrl = "pulsar://127.0.0.1:6650",
+        Authoritative = true
     )
     let command = BaseCommand(``type`` = CommandType.LookupResponse, lookupTopicResponse = response)
     command |> serializeSimpleCommand
