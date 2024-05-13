@@ -25,14 +25,14 @@ for (var i = 0; i < n / 10; i++)
 
 var sw = new Stopwatch();
 sw.Start();
-for (var i = 0; i < n; i++)
+for (var i = 0; i < n-1; i++)
 {
     await producer.SendAndForgetAsync(bytes);
 
     if (i % 100000 == 0)
         Console.WriteLine($"Sent {i} messages");
 }
-
+await producer.SendAsync(bytes);
 sw.Stop();
 Console.WriteLine(
     $"Sent {n} messages in {sw.ElapsedMilliseconds}ms. Speed: {n / (sw.ElapsedMilliseconds)}K msg/s");

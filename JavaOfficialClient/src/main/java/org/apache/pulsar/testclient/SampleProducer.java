@@ -28,7 +28,7 @@ public class SampleProducer {
             //warmup end
             var j = 0;
             long start = System.nanoTime();
-            while(j  < n) {
+            while(j  < n-1) {
                 if (j  % (n/100) == 0)
                 {
                     System.out.println("Sent " + j  + " messages");

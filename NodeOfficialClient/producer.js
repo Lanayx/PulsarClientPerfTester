@@ -19,22 +19,22 @@ const Pulsar = require('pulsar-client');
   while(i < n/10) {
     producer.send({
         data
-    });
+    })
     i ++
   }
   await producer.send({data})
 
   let start = performance.now()
   let j = 0;
-  while(j < n) {
+  while(j < n-1) {
     producer.send({
         data
-    });
+    })
+    j ++
     if (j  % (n/100) == 0)
     {
         console.log("Sent " + j  + " messages");
     }
-    j ++
   }
   await producer.send({data})
   let elapsedMs = performance.now() - start

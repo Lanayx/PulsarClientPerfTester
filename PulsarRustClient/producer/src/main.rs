@@ -1,7 +1,5 @@
 use std::time::Instant;
-use pulsar::{
-    Pulsar, TokioExecutor,
-};
+use pulsar::{producer, Pulsar, TokioExecutor};
 
 
 #[tokio::main]
@@ -14,6 +12,11 @@ async fn main() -> Result<(), pulsar::Error> {
         .producer()
         .with_topic("non-persistent://public/default/test")
         .with_name("my producer")
+        .with_options(producer::ProducerOptions {
+            batch_size: Some(1000),
+            batch_byte_size: Some(128 * 1024),
+            ..Default::default()
+        })
         .build()
         .await?;
 
@@ -28,13 +31,14 @@ async fn main() -> Result<(), pulsar::Error> {
     }
 
     i = 0;
-    while i<n {
+    while i<n-1 {
         producer.send(data).await?;
         i += 1;
         if i % 100000 == 0 {
             println!("sent {i} messages");
         }
     }
+    producer.send(data).await?.await.expect("Last message");
 
     let elapsed = now.elapsed().as_millis();
     let speed = n/elapsed;
