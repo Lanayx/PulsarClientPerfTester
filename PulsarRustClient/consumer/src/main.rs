@@ -1,31 +1,19 @@
-use futures::TryStreamExt;
+use std::time::Instant;
+use futures::{TryStreamExt};
 use pulsar::{
-    message::{proto::command_subscribe::SubType, Payload},
-    Consumer, DeserializeMessage, Pulsar, TokioExecutor,
+    message::{proto::command_subscribe::SubType},
+    Consumer, Pulsar, TokioExecutor,
 };
-use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize)]
-struct TestData {
-    data: String,
-}
-
-impl DeserializeMessage for TestData {
-    type Output = Result<TestData, serde_json::Error>;
-
-    fn deserialize_message(payload: &Payload) -> Self::Output {
-        serde_json::from_slice(&payload.data)
-    }
-}
 
 #[tokio::main]
 async fn main() -> Result<(), pulsar::Error> {
-    env_logger::init();
+    let now = Instant::now();
 
     let addr = "pulsar://127.0.0.1:6650";
     let pulsar: Pulsar<_> = Pulsar::builder(addr, TokioExecutor).build().await?;
 
-    let mut consumer: Consumer<TestData, _> = pulsar
+    let mut consumer: Consumer<Vec<u8>, _> = pulsar
         .consumer()
         .with_topic("test")
         .with_consumer_name("test_consumer")
@@ -34,24 +22,31 @@ async fn main() -> Result<(), pulsar::Error> {
         .build()
         .await?;
 
-    let mut counter = 0usize;
-    while let Some(msg) = consumer.try_next().await? {
+    let n = 10000000;
+    let mut i = 0;
+    while i<n/10 {
+        let msg = consumer.try_next().await?.unwrap();
         consumer.ack(&msg).await?;
-        let data = match msg.deserialize() {
-            Ok(data) => data,
-            Err(e) => {
-                log::error!("could not deserialize message: {:?}", e);
-                break;
-            }
-        };
 
-        if data.data.as_str() != "data" {
-            log::error!("Unexpected payload: {}", &data.data);
-            break;
-        }
-        counter += 1;
-        log::info!("got {} messages", counter);
+        i += 1;
     }
+
+    i = 0;
+    while i<n {
+        let msg = consumer.try_next().await?.unwrap();
+        consumer.ack(&msg).await?;
+
+        i += 1;
+        if i % 100000 == 0 {
+            println!("received {i} messages");
+        }
+    }
+
+    let elapsed = now.elapsed().as_millis();
+    let speed = n/elapsed;
+
+    println!(
+        "Received {n} messages in {elapsed}ms. Speed: {speed}K msg/s");
 
     Ok(())
 }
