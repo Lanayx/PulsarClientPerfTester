@@ -19,7 +19,7 @@ let payload = System.Convert.FromBase64String(stringPayload)
 
 let private serializePayloadCommand (command : BaseCommand) (metadata: MessageMetadata) (payload: byte[]) =
     (fun (output: PipeWriter) ->
-        let temp = MemoryStreamManager.GetStream() :?> RecyclableMemoryStream
+        let temp = MemoryStreamManager.GetStream()
         let binaryWriter = new BinaryWriter(temp)
 
         // write fake totalLength
